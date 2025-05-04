@@ -1,6 +1,11 @@
 import { Bot, Context, session, SessionFlavor, InlineKeyboard } from "grammy";
 import axios from "axios";
 import "dotenv/config";
+import {main} from "./api";
+
+import { sendToAmoCRM as sendToAmoFromApi } from "./api"; // используем переименование
+import type { Contact, Lead } from "./api"; // типы
+
 
 // Типы для сессии
 interface SessionData {
@@ -18,10 +23,10 @@ type MyContext = Context & SessionFlavor<SessionData>;
 
 // Константы для текста
 const otrasl = "Выберите отрасль применения:";
-const stoimostN2 = "Укажите параметры азотной станции (производительность, точку росы и т.д.):";
-const stoimostO2 = "Укажите параметры кислородной станции:";
-const stoimostVod = "Укажите параметры водородной станции:";
-const stoimostOsu = "Укажите параметры осушителя:";
+const stoimostN2 = "Введете нужные параметры азотной станции (производительность, точку росы и т.д.)?";
+const stoimostO2 = "Я покажу вам нужные кислородной станции, сможете их ввести?";
+const stoimostVod = "Я покажу вам нужные водородной станции, сможете их ввести?";
+const stoimostOsu = "Я покажу вам нужные параметры осушителя, сможете их ввести?";
 
 // Инициализация бота
 const bot = new Bot<MyContext>(process.env.BOT_API_KEY || "");
@@ -202,7 +207,7 @@ bot.on("message:text", async (ctx) => {
         // Все данные собраны → отправляем в amoCRM
         console.log(ctx.session)
         // await sendToAmoCRM(ctx.session);
-        await ctx.reply("✅ Данные отправлены! Менеджер свяжется с вами.");
+        await ctx.reply("✅ Данные направлены инженеру для расчета. Спасибо. С вами свяжутся в ближайшее время.");
 
         // Очищаем сессию
         ctx.session = {};
@@ -211,35 +216,49 @@ bot.on("message:text", async (ctx) => {
 
 // ==================== Отправка в amoCRM ====================
 async function sendToAmoCRM(data: SessionData) {
-    const AMO_API_URL = "https://yourdomain.amocrm.ru/api/v4/leads";
-    const AMO_API_KEY = process.env.FETCH_API_TOKEN; // Замените на реальный ключ
+    if (!data.contacts) {
+        console.error("Нет контактной информации");
+        return;
+    }
 
-    const leadData = {
-        name: `Заявка на ${data.selectedGas}`,
-        custom_fields_values: [
-            {
-                field_id: 123456, // Замените на ID поля в amoCRM
-                values: [{ value: data.performance }],
-            },
-            {
-                field_id: 123457,
-                values: [{ value: data.dewPoint }],
-            },
-            // Добавьте остальные поля...
-        ],
+    // Простейший парсинг телефона и email
+    const phoneMatch = data.contacts.match(/(\+?\d[\d\-\s]{7,})/);
+    const emailMatch = data.contacts.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+
+    const contact: Contact = {
+        name: `Клиент (${data.industry || "Не указано"})`,
+        phone: phoneMatch?.[0] || "не указан",
+        email: emailMatch?.[0] || "не указан",
+        phone_f: 123456, // ID кастомного поля телефона в amoCRM
+        email_f: 123457, // ID кастомного поля email в amoCRM
+    };
+
+    const noteParts = [
+        `Тип оборудования: ${data.selectedGas || "не указан"}`,
+        `Отрасль: ${data.industry || "не указана"}`,
+        `Производительность: ${data.performance || "не указана"}`,
+        `Точка росы: ${data.dewPoint || "не указана"}`,
+        `Давление: ${data.pressure || "не указано"}`,
+        `Чистота: ${data.purity || "не указана"}`,
+    ];
+
+    const lead: Lead = {
+        name: `Заявка на ${data.selectedGas || "оборудование"}`,
+        pipeline_id: 123456, // замените на ID нужной воронки
+        status_id: 123456,   // замените на ID нужного статуса
+        tags: [data.selectedGas || "Без тега"],
+        notes: noteParts.join("\n"),
     };
 
     try {
-        await axios.post(AMO_API_URL, leadData, {
-            headers: {
-                Authorization: `Bearer ${AMO_API_KEY}`,
-                "Content-Type": "application/json",
-            },
-        });
+        await sendToAmoFromApi({}, lead, contact); // передаём пустой user, если он не используется
+        console.log("Заявка успешно отправлена в amoCRM");
     } catch (error) {
-        console.error("Ошибка отправки в amoCRM:", error);
+        console.error("Ошибка при отправке в amoCRM:", error);
     }
 }
+
+
 
 // Запуск бота
 bot.start();
