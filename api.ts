@@ -48,6 +48,8 @@ export async function sendToAmoCRM(user: User, lead: Lead, contact: Contact): Pr
 
             if (lead.notes) await amoAddNote(lead, idLead);
         }
+        console.log("Отправляем lead:", lead);
+        console.log("Отправляем contact:", contact);
     }
 }
 async function amoFindLead(phone: string): Promise<number | null> {
