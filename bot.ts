@@ -244,8 +244,8 @@ async function sendToAmoCRM(data: SessionData) {
 
     const lead: Lead = {
         name: `Заявка на ${data.selectedGas || "оборудование"}`,
-        pipeline_id: 123456, // замените на ID нужной воронки
-        status_id: 123456,   // замените на ID нужного статуса
+        pipeline_id: 27814603, // замените на ID нужной воронки
+        status_id: 50238949,   // замените на ID нужного статуса
         tags: [data.selectedGas || "Без тега"],
         notes: noteParts.join("\n"),
     };
