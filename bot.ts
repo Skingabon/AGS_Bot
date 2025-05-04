@@ -208,7 +208,8 @@ bot.on("message:text", async (ctx) => {
         console.log(ctx.session)
         // await sendToAmoCRM(ctx.session);
         await ctx.reply("✅ Данные направлены инженеру для расчета. Спасибо. С вами свяжутся в ближайшее время.");
-
+// Параллельно отправляем данные в amoCRM
+        await sendToAmoCRM(ctx.session); // перед очисткой, чтобы данные не потерялись
         // Очищаем сессию
         ctx.session = {};
     }
