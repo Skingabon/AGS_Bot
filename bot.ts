@@ -245,7 +245,7 @@ async function sendToAmoCRM(data: SessionData) {
     `Точка росы: ${data.dewPoint || 'не указана'}`,
     `Давление: ${data.pressure || 'не указано'}`,
     `Чистота: ${data.purity || 'не указана'}`,
-    `Контакты: ${phoneMatch?.[0] || emailMatch?.[0]}`,
+    `Контакты: ${phoneMatch?.[0]}  ${emailMatch?.[0]}`,
   ];
 
   const lead: Lead = {
