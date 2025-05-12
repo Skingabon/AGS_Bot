@@ -184,7 +184,7 @@ bot.callbackQuery(['button_yes', 'button_yesOsush'], async (ctx) => {
 
 bot.callbackQuery(['button_no', 'button_noOsush'], async (ctx) => {
   ctx.session.knowsParams = false;
-  await ctx.reply('Введите ваши контакты (email/телефон):');
+  await ctx.reply('Введите ваши контакты (email, телефон):');
 });
 
 // ==================== Сбор данных ====================
@@ -200,10 +200,10 @@ bot.on('message:text', async (ctx) => {
     await ctx.reply('4. Введите чистоту газа (%):');
   } else if (!ctx.session.purity && ctx.session.pressure) {
     ctx.session.purity = ctx.message.text;
-    await ctx.reply('5. Введите ваши контакты (телефон/email):');
+    await ctx.reply('5. Введите ваши контакты (телефон, email):');
   } else if (!ctx.session.contacts) {
     ctx.session.contacts = ctx.message.text;
-    await ctx.reply('6. Напишите, пожалуйста, как к Вам обращаться и опишите вашу задачу или информацию, которую считаете нужной для нас. Или оставьте поле пустым.');
+    await ctx.reply('Напишите, пожалуйста, как к Вам обращаться и опишите вашу задачу или информацию, которую считаете нужной для нас.');
   } else if (!ctx.session.information) {
     ctx.session.information = ctx.message.text;
 
