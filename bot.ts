@@ -13,6 +13,7 @@ interface SessionData {
   pressure?: string;
   purity?: string;
   contacts?: string;
+  information?: string;
 }
 
 type MyContext = Context & SessionFlavor<SessionData>;
@@ -199,9 +200,12 @@ bot.on('message:text', async (ctx) => {
     await ctx.reply('4. Введите чистоту газа (%):');
   } else if (!ctx.session.purity && ctx.session.pressure) {
     ctx.session.purity = ctx.message.text;
-    await ctx.reply('5. Введите ваши контакты:');
+    await ctx.reply('5. Введите ваши контакты (телефон/email):');
   } else if (!ctx.session.contacts) {
     ctx.session.contacts = ctx.message.text;
+    await ctx.reply('6. Напишите, пожалуйста, как к Вам обращаться и опишите вашу задачу или информацию, которую считаете нужной для нас. Или оставьте поле пустым.');
+  } else if (!ctx.session.information) {
+    ctx.session.information = ctx.message.text;
 
     // Все данные собраны → отправляем в amoCRM
     // console.log(ctx.session)
@@ -246,6 +250,7 @@ async function sendToAmoCRM(data: SessionData) {
     `Давление: ${data.pressure || 'не указано'}`,
     `Чистота: ${data.purity || 'не указана'}`,
     `Контакты: ${phoneMatch?.[0]}  ${emailMatch?.[0]}`,
+    `Информация: ${data.information || 'не указана'}`,
   ];
 
   const lead: Lead = {
