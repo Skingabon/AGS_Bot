@@ -1,7 +1,7 @@
 import { Bot, Context, session, SessionFlavor, InlineKeyboard } from 'grammy';
 import 'dotenv/config';
 import { sendToAmoCRM as sendToAmoFromApi } from './api'; // используем переименование
-import type { Contact, Lead } from './api';
+import type { Lead } from './api';
 
 // Типы для сессии
 interface SessionData {
@@ -203,13 +203,12 @@ bot.on('message:text', async (ctx) => {
     await ctx.reply('5. Введите ваши контакты (телефон, email):');
   } else if (!ctx.session.contacts) {
     ctx.session.contacts = ctx.message.text;
-    await ctx.reply('Напишите, пожалуйста, как к Вам обращаться и опишите вашу задачу или информацию, которую считаете нужной для нас.');
+    await ctx.reply(
+      'Напишите, пожалуйста, как к Вам обращаться и опишите вашу задачу или информацию, которую считаете нужной для нас.',
+    );
   } else if (!ctx.session.information) {
     ctx.session.information = ctx.message.text;
 
-    // Все данные собраны → отправляем в amoCRM
-    // console.log(ctx.session)
-    // await sendToAmoCRM(ctx.session);
     await ctx.reply(
       '✅ Данные направлены инженеру для расчета. Спасибо. С вами свяжутся в ближайшее время.',
     );
@@ -234,14 +233,6 @@ async function sendToAmoCRM(data: SessionData) {
     /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/,
   );
 
-  const contact: Contact = {
-    name: `Клиент (${data.industry || 'Не указано'})`,
-    phone: phoneMatch?.[0] || 'не указан',
-    email: emailMatch?.[0] || 'не указан',
-    phone_f: 123456, // ID кастомного поля телефона в amoCRM
-    email_f: 123457, // ID кастомного поля email в amoCRM
-  };
-
   const noteParts = [
     `Тип оборудования: ${data.selectedGas || 'не указан'}`,
     `Отрасль: ${data.industry || 'не указана'}`,
@@ -260,70 +251,21 @@ async function sendToAmoCRM(data: SessionData) {
     status_id: 50238949, // замените на ID нужного статуса
     tags: [data.selectedGas || 'Без тега'],
     notes: noteParts.join('\n'),
-    custom_fields_values: [
-        {
+    sourceLead: {
+      value: 'Telegram',
       field_id: 595185,
-          field_type: 'select',
-      values: [{
-        value:'Telegram',
-        enum_id: 836051,
-      }]
+      enum_id: 836051,
     },
-      {
-        field_id: 603821,
-
-        values: [{
-          value:'rpoverka',
-
-        }]
-      },
-    ]
   };
 
   try {
-    await sendToAmoFromApi(lead, contact); // передаём пустой user, если он не используется
+    await sendToAmoFromApi(lead); // передаём пустой user, если он не используется
     console.log('Заявка успешно отправлена в amoCRM');
   } catch (error) {
     if (error instanceof Error)
       console.error('Ошибка при отправке в amoCRM:', error.message);
   }
 }
-
-bot.callbackQuery('test', async () => {
-  const contact: Contact = {
-    name: `Клиент TEST`,
-    phone: '+79801116089',
-    email: 'pupka@zakupka.com',
-    phone_f: 123456, // ID кастомного поля телефона в amoCRM
-    email_f: 123457, // ID кастомного поля email в amoCRM
-  };
-
-  const noteParts = [
-    `Тип оборудования: "не указан"`,
-    `Отрасль:"не указана"`,
-    `Производительность: "не указана"`,
-    `Точка росы: "не указана"`,
-    `Давление: "не указано"`,
-    `Чистота: "не указана"`,
-  ];
-
-  //Для теста
-  // const lead: Lead = {
-  //   name: `Разработка Катков`,
-  //   pipeline_id: 5716552, // замените на ID нужной воронки
-  //   status_id: 50238949, // замените на ID нужного статуса
-  //   tags: ['Без тега'],
-  //   notes: noteParts.join('\n'),
-  // };
-
-  try {
-    await sendToAmoFromApi(lead, contact); // передаём пустой user, если он не используется
-    console.log('Заявка успешно отправлена в amoCRM');
-  } catch (error) {
-    if (error instanceof Error)
-      console.error('Ошибка при отправке в amoCRM:', error.message);
-  }
-});
 
 // Запуск бота
 bot.start();
