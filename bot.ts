@@ -253,12 +253,31 @@ async function sendToAmoCRM(data: SessionData) {
     `Информация: ${data.information || 'не указана'}`,
   ];
 
+  //TODO заполнять источник лида "Telegram"
   const lead: Lead = {
     name: `Заявка на ${data.selectedGas || 'оборудование'}`,
     pipeline_id: 5716552, // замените на ID нужной воронки
     status_id: 50238949, // замените на ID нужного статуса
     tags: [data.selectedGas || 'Без тега'],
     notes: noteParts.join('\n'),
+    custom_fields_values: [
+        {
+      field_id: 595185,
+          field_type: 'select',
+      values: [{
+        value:'Telegram',
+        enum_id: 836051,
+      }]
+    },
+      {
+        field_id: 603821,
+
+        values: [{
+          value:'rpoverka',
+
+        }]
+      },
+    ]
   };
 
   try {
@@ -288,13 +307,14 @@ bot.callbackQuery('test', async () => {
     `Чистота: "не указана"`,
   ];
 
-  const lead: Lead = {
-    name: `Разработка Катков`,
-    pipeline_id: 5716552, // замените на ID нужной воронки
-    status_id: 50238949, // замените на ID нужного статуса
-    tags: ['Без тега'],
-    notes: noteParts.join('\n'),
-  };
+  //Для теста
+  // const lead: Lead = {
+  //   name: `Разработка Катков`,
+  //   pipeline_id: 5716552, // замените на ID нужной воронки
+  //   status_id: 50238949, // замените на ID нужного статуса
+  //   tags: ['Без тега'],
+  //   notes: noteParts.join('\n'),
+  // };
 
   try {
     await sendToAmoFromApi(lead, contact); // передаём пустой user, если он не используется

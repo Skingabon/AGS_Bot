@@ -16,6 +16,7 @@ export type Lead = {
   pipeline_id: number;
   status_id: number;
   tags?: string[];
+  custom_fields_values: { field_id: number; field_type?: string; values: { value: string, enum_id?: number }[] }[];
 };
 
 export type User = {
