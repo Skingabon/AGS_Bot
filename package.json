@@ -3,8 +3,11 @@
   "version": "1.0.0",
   "description": "",
   "main": "bot.ts",
-  "scripts": {
-    "start": "nodemon bot.ts"
+ "scripts": {
+    "dev": "nodemon --watch './' --watch 'bot.ts' -e ts,js,json --exec ts-node bot.ts",
+    "build": "tsc",
+    "start": "node dist/bot.js",
+    "prod": "npm run build && npm start"
   },
   "keywords": [],
   "author": "",
