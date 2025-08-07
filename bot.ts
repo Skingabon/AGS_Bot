@@ -2,10 +2,13 @@ import { Bot, Context, session, SessionFlavor, InlineKeyboard } from 'grammy';
 import 'dotenv/config';
 import { sendToAmoCRM as sendToAmoFromApi } from './api'; // используем переименование
 import type { Lead } from './api';
+import { sendService } from './emailSender';
+
+// const userEmail = process.env.RECEIVER_EMAIL; // куда отправляем письмо
 
 // Типы для сессии
-interface SessionData {
-  selectedGas?: 'N2' | 'O2' | 'Водород' | 'Осушка';
+export interface SessionData {
+  selectedGas?: 'N2' | 'O2' | 'Водород' | 'Осушка'| 'Заявка в сервисную службу АГС';
   industry?: string;
   knowsParams?: boolean;
   performance?: string;
@@ -28,9 +31,12 @@ const stoimostVod =
   'Я покажу вам нужные параметры водородной станции, сможете их ввести?';
 const stoimostOsu =
   'Я покажу вам нужные параметры осушителя, сможете их ввести?';
+  const serviceAGS =
+  'Ответьте пожалуйста на несколько вопросов';
 
 // Инициализация бота
 const bot = new Bot<MyContext>(process.env.BOT_API_KEY || '');
+
 
 bot.api.setMyCommands([{ command: 'start', description: 'Запустить бота' }]);
 
@@ -44,15 +50,32 @@ bot.command('start', async (ctx) => {
     .text('O2', 'button_O2')
     .row()
     .text('Водород', 'button_vod')
-    .text('Осушка', 'button_osu');
+    .text('Осушка', 'button_osu')
+    .row()
+    .text('Заявка в сервисную службу АГС', 'button_service');
   // .text('TEST', 'test'); //TODO: удалить
 
-  await ctx.reply('Здравствуйте! Выберите тип оборудования:', {
+  await ctx.reply('Здравствуйте! Выберите тип оборудования или оставьте заявку в сервисную службу АГС:', {
     reply_markup: keyboard,
   });
 });
 
 // ==================== Обработчики кнопок ====================
+
+// ------ Блок сервиса ------
+bot.callbackQuery('button_service', async (ctx) => {
+  ctx.session.selectedGas = 'Заявка в сервисную службу АГС';
+  const keyboard = new InlineKeyboard()
+    .text('Ответить', 'button_otvet')
+    .row();
+  await ctx.reply(serviceAGS, { reply_markup: keyboard });
+});
+
+bot.callbackQuery('button_otvet', async (ctx) => {
+  ctx.session.knowsParams = true;
+  await ctx.reply('Укажите ИНН организации, тип оборудования, тип неисправности и Ваши контактные данные (телефон, email):');
+});
+
 
 // ------ Блок N2 ------
 bot.callbackQuery('button_N2', async (ctx) => {
@@ -62,7 +85,9 @@ bot.callbackQuery('button_N2', async (ctx) => {
     .row()
     .text('Пищевая', 'button_eda')
     .row()
-    .text('Электроника', 'button_electro');
+    .text('Электроника', 'button_electro')
+    .row()
+    .text('Другая отрасль', 'button_other');
 
   await ctx.reply(otrasl, { reply_markup: keyboard });
 });
@@ -73,7 +98,9 @@ bot.callbackQuery('button_O2', async (ctx) => {
   const keyboard = new InlineKeyboard()
     .text('Рыборазведение', 'button_fish')
     .row()
-    .text('Металлургия', 'button_metal');
+    .text('Металлургия', 'button_metal')
+    .row()
+    .text('Другая отрасль', 'button_other');
 
   await ctx.reply(otrasl, { reply_markup: keyboard });
 });
@@ -84,7 +111,9 @@ bot.callbackQuery('button_vod', async (ctx) => {
   const keyboard = new InlineKeyboard()
     .text('Энергетика', 'button_energetika')
     .row()
-    .text('Электроника', 'button_electro');
+    .text('Электроника', 'button_electro')
+        .row()
+    .text('Другая отрасль', 'button_other');
 
   await ctx.reply(otrasl, { reply_markup: keyboard });
 });
@@ -125,6 +154,14 @@ bot.callbackQuery('button_electro', async (ctx) => {
   await ctx.reply(stoimostN2, { reply_markup: keyboard });
 });
 
+bot.callbackQuery('button_other', async (ctx) => {
+  ctx.session.industry = 'Другая отрасль';
+  const keyboard = new InlineKeyboard()
+    .text('ДА', 'button_yes')
+    .text('НЕТ', 'button_no');
+  await ctx.reply(stoimostN2, { reply_markup: keyboard });
+});
+
 // ------ Для O2 ------
 bot.callbackQuery('button_fish', async (ctx) => {
   ctx.session.industry = 'Рыборазведение';
@@ -142,6 +179,14 @@ bot.callbackQuery('button_metal', async (ctx) => {
   await ctx.reply(stoimostO2, { reply_markup: keyboard });
 });
 
+bot.callbackQuery('button_other', async (ctx) => {
+  ctx.session.industry = 'Другая отрасль';
+  const keyboard = new InlineKeyboard()
+    .text('ДА', 'button_yes')
+    .text('НЕТ', 'button_no');
+  await ctx.reply(stoimostO2, { reply_markup: keyboard });
+});
+
 // ------ Для Водорода ------
 bot.callbackQuery('button_energetika', async (ctx) => {
   ctx.session.industry = 'Энергетика';
@@ -153,6 +198,14 @@ bot.callbackQuery('button_energetika', async (ctx) => {
 
 bot.callbackQuery('button_electro', async (ctx) => {
   ctx.session.industry = 'Электроника';
+  const keyboard = new InlineKeyboard()
+    .text('ДА', 'button_yes')
+    .text('НЕТ', 'button_no');
+  await ctx.reply(stoimostVod, { reply_markup: keyboard });
+});
+
+bot.callbackQuery('button_other', async (ctx) => {
+  ctx.session.industry = 'Другая отрасль';
   const keyboard = new InlineKeyboard()
     .text('ДА', 'button_yes')
     .text('НЕТ', 'button_no');
@@ -189,6 +242,21 @@ bot.callbackQuery(['button_no', 'button_noOsush'], async (ctx) => {
 
 // ==================== Сбор данных ====================
 bot.on('message:text', async (ctx) => {
+  // ======= Сервисная заявка =======
+  if (ctx.session.selectedGas === 'Заявка в сервисную службу АГС' && !ctx.session.contacts) {
+    ctx.session.contacts = ctx.message.text;
+    await ctx.reply(
+      '✅ Ваша заявка в сервисную службу принята. Спасибо. С вами свяжутся в ближайшее время.',
+    );
+
+    // Отправка в amoCRM
+    await sendToAmoCRM(ctx.session);
+await sendService(ctx.session);
+    // Очистка
+    ctx.session = {};
+    return;
+  }
+// bot.on('message:text', async (ctx) => {
   if (!ctx.session.performance && ctx.session.knowsParams) {
     ctx.session.performance = ctx.message.text;
     await ctx.reply('2. Введите точку росы (-40 или -70):');
@@ -215,6 +283,9 @@ bot.on('message:text', async (ctx) => {
     // Параллельно отправляем данные в amoCRM
 
     await sendToAmoCRM(ctx.session); // перед очисткой, чтобы данные не потерялись
+    
+  // Отправка на email
+await sendService(ctx.session);
     // Очищаем сессию
     ctx.session = {};
   }
@@ -246,11 +317,19 @@ async function sendToAmoCRM(data: SessionData) {
 
   //TODO заполнять источник лида "Telegram"
   const lead: Lead = {
-    name: `Заявка на ${data.selectedGas || 'оборудование'}`,
+    // name: `Заявка на ${data.selectedGas || 'оборудование'}`,
+    name:
+    data.selectedGas === 'Заявка в сервисную службу АГС'
+      ? 'Сервисная заявка'
+      : `Заявка на ${data.selectedGas || 'оборудование'}`,
     pipeline_id: 5716552, // замените на ID нужной воронки
     status_id: 50238949, // замените на ID нужного статуса
     tags: [data.selectedGas || 'Без тега'],
-    notes: noteParts.join('\n'),
+    // notes: noteParts.join('\n'),
+    notes:
+    data.selectedGas === 'Заявка в сервисную службу АГС'
+      ? `Сервисная заявка:\nКонтакты: ${data.contacts}`
+      : noteParts.join('\n'),
     sourceLead: {
       value: 'Telegram',
       field_id: 595185,

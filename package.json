@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "bot.ts",
- "scripts": {
+  "scripts": {
     "dev": "nodemon --watch './' --watch 'bot.ts' -e ts,js,json --exec ts-node bot.ts",
     "build": "tsc",
     "start": "node dist/bot.js",
@@ -19,11 +19,13 @@
     "grammy": "^1.35.1",
     "node-fetch": "^3.3.2",
     "node-telegram-bot-api": "^0.66.0",
+    "nodemailer": "^7.0.5",
     "nodemon": "^3.1.9",
     "prettier": "^3.5.3"
   },
   "devDependencies": {
     "@types/node": "^22.14.1",
+    "@types/nodemailer": "^6.4.17",
     "eslint": "^9.23.0",
     "eslint-plugin-react": "^7.37.4",
     "globals": "^16.0.0",
