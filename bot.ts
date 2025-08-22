@@ -17,7 +17,17 @@ export interface SessionData {
   purity?: string;
   contacts?: string;
   information?: string;
+  calculator?: CalculatorSession;
+  calculatorStep?: number;
 }
+
+export interface CalculatorSession {
+  consumptionYear?: number;
+  pricePerM3?: number;
+  costPerM3?: number;
+  equipmentCost?: number;
+}
+
 
 type MyContext = Context & SessionFlavor<SessionData>;
 
@@ -43,8 +53,40 @@ bot.api.setMyCommands([{ command: 'start', description: 'Запустить бо
 // Настройка сессии
 bot.use(session({ initial: (): SessionData => ({}) }));
 
+// ==================== Функция расчёта окупаемости ====================
+function calcPayback({
+  consumptionYear, // годовой расход м³
+  pricePerM3,      // цена за м³ (баллоны)
+  costPerM3,       // себестоимость с АГС
+  equipmentCost,   // стоимость оборудования
+}: {
+  consumptionYear: number;
+  pricePerM3: number;
+  costPerM3: number;
+  equipmentCost: number;
+}) {
+  const current = consumptionYear * pricePerM3;
+  const newCost = consumptionYear * costPerM3;
+  const economy = current - newCost;
+  const paybackYears = equipmentCost / economy;
+  const paybackMonths = paybackYears * 12;
+
+  return {
+    current,
+    newCost,
+    economy,
+    paybackYears,
+    paybackMonths,
+  };
+}
+
 // ==================== Команда /start ====================
-bot.command('start', async (ctx) => {
+bot.callbackQuery('start', async (ctx) => {
+  // Очистим сессию калькулятора
+  delete ctx.session.calculatorStep;
+  delete ctx.session.calculator;
+    // Обязательный ответ на callbackQuery, чтобы кнопка "не висела"
+  await ctx.answerCallbackQuery();
   const keyboard = new InlineKeyboard()
     .text('N2', 'button_N2')
     .text('O2', 'button_O2')
@@ -58,6 +100,54 @@ bot.command('start', async (ctx) => {
   await ctx.reply('Здравствуйте! Выберите тип оборудования или оставьте заявку в сервисную службу АГС:', {
     reply_markup: keyboard,
   });
+  // Отправляем второй текст с кнопкой калькулятор
+  const calcKeyboard = new InlineKeyboard()
+    .text('Рассчитать', 'button_calculator');
+
+  await ctx.reply(
+  `У нас для вас полезный бонус! 🎁
+Мы подготовили удобный калькулятор выгоды, который мгновенно покажет:
+• сколько вы сэкономите с нашим оборудованием
+• за какой срок оно полностью окупится
+
+Попробуйте прямо сейчас — и убедитесь, что сотрудничество с АГС приносит выгоду с первого дня!`,
+  {
+    reply_markup: calcKeyboard,
+  }
+);
+});
+
+bot.command('start', async (ctx) => {
+  delete ctx.session.calculatorStep;
+  delete ctx.session.calculator;
+  const keyboard = new InlineKeyboard()
+    .text('N2', 'button_N2')
+    .text('O2', 'button_O2')
+    .row()
+    .text('Водород', 'button_vod')
+    .text('Осушка', 'button_osu')
+    .row()
+    .text('Заявка в сервисную службу АГС', 'button_service');
+  // .text('TEST', 'test'); //TODO: удалить
+
+  await ctx.reply('Здравствуйте! Выберите тип оборудования или оставьте заявку в сервисную службу АГС:', {
+    reply_markup: keyboard,
+  });
+  // Отправляем второй текст с кнопкой калькулятор
+  const calcKeyboard = new InlineKeyboard()
+    .text('Рассчитать', 'button_calculator');
+
+  await ctx.reply(
+  `У нас для вас полезный бонус! 🎁
+Мы подготовили удобный калькулятор выгоды, который мгновенно покажет:
+• сколько вы сэкономите с нашим оборудованием
+• за какой срок оно полностью окупится
+
+Попробуйте прямо сейчас — и убедитесь, что сотрудничество с АГС приносит выгоду с первого дня!`,
+  {
+    reply_markup: calcKeyboard,
+  }
+);
 });
 
 // ==================== Обработчики кнопок ====================
@@ -239,6 +329,74 @@ bot.callbackQuery(['button_no', 'button_noOsush'], async (ctx) => {
   ctx.session.knowsParams = false;
   await ctx.reply('Введите ваши контакты (email, телефон):');
 });
+
+// ==================== Кнопка "Калькулятор" ====================
+bot.callbackQuery('button_calculator', async (ctx) => {
+  ctx.session.calculatorStep = 1;
+  ctx.session.calculator = {};
+  await ctx.reply('Введите годовой расход газа в м³:', {
+          reply_markup: new InlineKeyboard().text('Вернуться в начало', 'start')
+        })
+      });
+
+// ==================== Обработка сообщений для калькулятора ====================
+bot.on('message:text', async (ctx) => {
+  if (ctx.session.calculatorStep) {
+    const text = ctx.message.text.replace(',', '.');
+    const value = parseFloat(text);
+    if (isNaN(value) || value <= 0) return ctx.reply('❌ Введите корректное число больше 0.');
+
+    switch (ctx.session.calculatorStep) {
+      case 1:
+        ctx.session.calculator!.consumptionYear = value;
+        ctx.session.calculatorStep = 2;
+        await ctx.reply('Введите текущую цену за 1 м³ газа (руб/м³):', {
+          reply_markup: new InlineKeyboard().text('Вернуться в начало', 'start')
+        });
+        break;
+      case 2:
+        ctx.session.calculator!.pricePerM3 = value;
+        ctx.session.calculatorStep = 3;
+        await ctx.reply('Введите себестоимость 1 м³ газа с АГС (руб/м³):', {
+          reply_markup: new InlineKeyboard().text('Вернуться в начало', 'start')
+        });
+        break;
+      case 3:
+        ctx.session.calculator!.costPerM3 = value;
+        ctx.session.calculatorStep = 4;
+        await ctx.reply('Введите стоимость оборудования (руб):', {
+          reply_markup: new InlineKeyboard().text('Вернуться в начало', 'start')
+        });
+        break;
+      case 4:
+        ctx.session.calculator!.equipmentCost = value;
+
+        const result = calcPayback({
+          consumptionYear: ctx.session.calculator!.consumptionYear!,
+          pricePerM3: ctx.session.calculator!.pricePerM3!,
+          costPerM3: ctx.session.calculator!.costPerM3!,
+          equipmentCost: ctx.session.calculator!.equipmentCost!,
+        });
+
+        await ctx.reply(
+          `💰 Результаты расчета:
+Текущие расходы: ${result.current.toFixed(2)} руб
+Новые расходы: ${result.newCost.toFixed(2)} руб
+Экономия: ${result.economy.toFixed(2)} руб
+Окупаемость: ${result.paybackYears.toFixed(2)} лет (${result.paybackMonths.toFixed(0)} мес.)`,
+{
+            reply_markup: new InlineKeyboard().text('Вернуться в начало', 'start')
+          }
+        );
+
+        delete ctx.session.calculatorStep;
+        delete ctx.session.calculator;
+        break;
+        
+    }
+    return;
+  }})
+
 
 // ==================== Сбор данных ====================
 bot.on('message:text', async (ctx) => {
