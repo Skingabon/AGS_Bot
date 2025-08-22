@@ -8,7 +8,12 @@ import { sendService } from './emailSender';
 
 // Типы для сессии
 export interface SessionData {
-  selectedGas?: 'N2' | 'O2' | 'Водород' | 'Осушка'| 'Заявка в сервисную службу АГС';
+  selectedGas?:
+    | 'N2'
+    | 'O2'
+    | 'Водород'
+    | 'Осушка'
+    | 'Заявка в сервисную службу АГС';
   industry?: string;
   knowsParams?: boolean;
   performance?: string;
@@ -28,7 +33,6 @@ export interface CalculatorSession {
   equipmentCost?: number;
 }
 
-
 type MyContext = Context & SessionFlavor<SessionData>;
 
 // Константы для текста
@@ -41,12 +45,10 @@ const stoimostVod =
   'Я покажу вам нужные параметры водородной станции, сможете их ввести?';
 const stoimostOsu =
   'Я покажу вам нужные параметры осушителя, сможете их ввести?';
-  const serviceAGS =
-  'Ответьте пожалуйста на несколько вопросов';
+const serviceAGS = 'Ответьте пожалуйста на несколько вопросов';
 
 // Инициализация бота
 const bot = new Bot<MyContext>(process.env.BOT_API_KEY || '');
-
 
 bot.api.setMyCommands([{ command: 'start', description: 'Запустить бота' }]);
 
@@ -56,17 +58,15 @@ bot.use(session({ initial: (): SessionData => ({}) }));
 // ==================== Функция расчёта окупаемости ====================
 function calcPayback({
   consumptionYear, // годовой расход м³
-  pricePerM3,      // цена за м³ (баллоны)
-  costPerM3,       // себестоимость с АГС
-  equipmentCost,   // стоимость оборудования
+  pricePerM3, // цена за м³ (баллоны)
+  equipmentCost, // стоимость оборудования
 }: {
   consumptionYear: number;
   pricePerM3: number;
-  costPerM3: number;
   equipmentCost: number;
 }) {
   const current = consumptionYear * pricePerM3;
-  const newCost = consumptionYear * costPerM3;
+  const newCost = consumptionYear * 10;
   const economy = current - newCost;
   const paybackYears = equipmentCost / economy;
   const paybackMonths = paybackYears * 12;
@@ -85,7 +85,7 @@ bot.callbackQuery('start', async (ctx) => {
   // Очистим сессию калькулятора
   delete ctx.session.calculatorStep;
   delete ctx.session.calculator;
-    // Обязательный ответ на callbackQuery, чтобы кнопка "не висела"
+  // Обязательный ответ на callbackQuery, чтобы кнопка "не висела"
   await ctx.answerCallbackQuery();
   const keyboard = new InlineKeyboard()
     .text('N2', 'button_N2')
@@ -94,27 +94,18 @@ bot.callbackQuery('start', async (ctx) => {
     .text('Водород', 'button_vod')
     .text('Осушка', 'button_osu')
     .row()
-    .text('Заявка в сервисную службу АГС', 'button_service');
-  // .text('TEST', 'test'); //TODO: удалить
-
-  await ctx.reply('Здравствуйте! Выберите тип оборудования или оставьте заявку в сервисную службу АГС:', {
-    reply_markup: keyboard,
-  });
-  // Отправляем второй текст с кнопкой калькулятор
-  const calcKeyboard = new InlineKeyboard()
-    .text('Рассчитать', 'button_calculator');
+    .text('Заявка в сервисную службу АГС', 'button_service')
+    .row()
+    .text('📊 Калькулятор выгоды', 'calculator');
 
   await ctx.reply(
-  `У нас для вас полезный бонус! 🎁
-Мы подготовили удобный калькулятор выгоды, который мгновенно покажет:
-• сколько вы сэкономите с нашим оборудованием
-• за какой срок оно полностью окупится
-
-Попробуйте прямо сейчас — и убедитесь, что сотрудничество с АГС приносит выгоду с первого дня!`,
-  {
-    reply_markup: calcKeyboard,
-  }
-);
+    'Здравствуйте! Выберите тип оборудования, оставьте заявку или воспользуйтесь калькулятором.\n\n" +    "🎁 У нас для вас полезный бонус!\n" +\n' +
+      '    "Мы подготовили удобный калькулятор выгоды, который мгновенно покажет:\n" +    "• сколько вы сэкономите с нашим оборудованием\n" +\n' +
+      '    "• за какой срок оно полностью окупится\n\n" +    "Попробуйте прямо сейчас — и убедитесь, что сотрудничество с АГС приносит выгоду с первого дня!',
+    {
+      reply_markup: keyboard,
+    },
+  );
 });
 
 bot.command('start', async (ctx) => {
@@ -127,27 +118,18 @@ bot.command('start', async (ctx) => {
     .text('Водород', 'button_vod')
     .text('Осушка', 'button_osu')
     .row()
-    .text('Заявка в сервисную службу АГС', 'button_service');
-  // .text('TEST', 'test'); //TODO: удалить
-
-  await ctx.reply('Здравствуйте! Выберите тип оборудования или оставьте заявку в сервисную службу АГС:', {
-    reply_markup: keyboard,
-  });
-  // Отправляем второй текст с кнопкой калькулятор
-  const calcKeyboard = new InlineKeyboard()
-    .text('Рассчитать', 'button_calculator');
+    .text('Заявка в сервисную службу АГС', 'button_service')
+    .row()
+    .text('📊 Калькулятор выгоды', 'calculator');
 
   await ctx.reply(
-  `У нас для вас полезный бонус! 🎁
-Мы подготовили удобный калькулятор выгоды, который мгновенно покажет:
-• сколько вы сэкономите с нашим оборудованием
-• за какой срок оно полностью окупится
-
-Попробуйте прямо сейчас — и убедитесь, что сотрудничество с АГС приносит выгоду с первого дня!`,
-  {
-    reply_markup: calcKeyboard,
-  }
-);
+    'Здравствуйте! Выберите тип оборудования, оставьте заявку или воспользуйтесь калькулятором.\n\n🎁 У нас для вас полезный бонус!\n\n' +
+      'Мы подготовили удобный калькулятор выгоды, который мгновенно покажет:\n✅ сколько вы сэкономите с нашим оборудованием' +
+      '\n✅ сколько вы сэкономите с нашим оборудованием\n\nПопробуйте прямо сейчас — и убедитесь, что сотрудничество с АГС приносит выгоду с первого дня!',
+    {
+      reply_markup: keyboard,
+    },
+  );
 });
 
 // ==================== Обработчики кнопок ====================
@@ -155,17 +137,16 @@ bot.command('start', async (ctx) => {
 // ------ Блок сервиса ------
 bot.callbackQuery('button_service', async (ctx) => {
   ctx.session.selectedGas = 'Заявка в сервисную службу АГС';
-  const keyboard = new InlineKeyboard()
-    .text('Ответить', 'button_otvet')
-    .row();
+  const keyboard = new InlineKeyboard().text('Ответить', 'button_otvet').row();
   await ctx.reply(serviceAGS, { reply_markup: keyboard });
 });
 
 bot.callbackQuery('button_otvet', async (ctx) => {
   ctx.session.knowsParams = true;
-  await ctx.reply('Укажите ИНН организации, тип оборудования, тип неисправности и Ваши контактные данные (телефон, email):');
+  await ctx.reply(
+    'Укажите ИНН организации, тип оборудования, тип неисправности и Ваши контактные данные (телефон, email):',
+  );
 });
-
 
 // ------ Блок N2 ------
 bot.callbackQuery('button_N2', async (ctx) => {
@@ -202,7 +183,7 @@ bot.callbackQuery('button_vod', async (ctx) => {
     .text('Энергетика', 'button_energetika')
     .row()
     .text('Электроника', 'button_electro')
-        .row()
+    .row()
     .text('Другая отрасль', 'button_other');
 
   await ctx.reply(otrasl, { reply_markup: keyboard });
@@ -335,73 +316,77 @@ bot.callbackQuery('button_calculator', async (ctx) => {
   ctx.session.calculatorStep = 1;
   ctx.session.calculator = {};
   await ctx.reply('Введите годовой расход газа в м³:', {
-          reply_markup: new InlineKeyboard().text('Вернуться в начало', 'start')
-        })
-      });
+    reply_markup: new InlineKeyboard().text('Вернуться в начало', 'start'),
+  });
+});
 
 // ==================== Обработка сообщений для калькулятора ====================
+// bot.on('message:text', async (ctx) => {});
+
+// ==================== Сбор данных ====================
 bot.on('message:text', async (ctx) => {
   if (ctx.session.calculatorStep) {
     const text = ctx.message.text.replace(',', '.');
     const value = parseFloat(text);
-    if (isNaN(value) || value <= 0) return ctx.reply('❌ Введите корректное число больше 0.');
+    if (isNaN(value) || value <= 0)
+      return ctx.reply('❌ Введите корректное число больше 0.');
 
     switch (ctx.session.calculatorStep) {
       case 1:
         ctx.session.calculator!.consumptionYear = value;
-        ctx.session.calculatorStep = 2;
-        await ctx.reply('Введите текущую цену за 1 м³ газа (руб/м³):', {
-          reply_markup: new InlineKeyboard().text('Вернуться в начало', 'start')
-        });
-        break;
-      case 2:
-        ctx.session.calculator!.pricePerM3 = value;
         ctx.session.calculatorStep = 3;
-        await ctx.reply('Введите себестоимость 1 м³ газа с АГС (руб/м³):', {
-          reply_markup: new InlineKeyboard().text('Вернуться в начало', 'start')
+        await ctx.reply('Введите текущую цену за 1 м³ газа (руб/м³):', {
+          reply_markup: new InlineKeyboard().text(
+            'Вернуться в начало',
+            'start',
+          ),
         });
         break;
       case 3:
-        ctx.session.calculator!.costPerM3 = value;
+        ctx.session.calculator!.pricePerM3 = value;
         ctx.session.calculatorStep = 4;
         await ctx.reply('Введите стоимость оборудования (руб):', {
-          reply_markup: new InlineKeyboard().text('Вернуться в начало', 'start')
+          reply_markup: new InlineKeyboard().text(
+            'Вернуться в начало',
+            'start',
+          ),
         });
         break;
       case 4:
         ctx.session.calculator!.equipmentCost = value;
 
-        const result = calcPayback({
-          consumptionYear: ctx.session.calculator!.consumptionYear!,
-          pricePerM3: ctx.session.calculator!.pricePerM3!,
-          costPerM3: ctx.session.calculator!.costPerM3!,
-          equipmentCost: ctx.session.calculator!.equipmentCost!,
-        });
-
-        await ctx.reply(
-          `💰 Результаты расчета:
-Текущие расходы: ${result.current.toFixed(2)} руб
-Новые расходы: ${result.newCost.toFixed(2)} руб
-Экономия: ${result.economy.toFixed(2)} руб
+        if (ctx.session.calculator) {
+          const result = calcPayback({
+            consumptionYear: ctx.session.calculator.consumptionYear || 0,
+            pricePerM3: ctx.session.calculator.pricePerM3 || 0,
+            equipmentCost: ctx.session.calculator.equipmentCost,
+          });
+          await ctx.reply(
+            `💰 Результаты расчета:
+Текущие расходы: ${result.current.toFixed(2).toLocaleString()} руб
+Новые расходы: ${result.newCost.toFixed(2).toLocaleString()} руб
+Экономия: ${result.economy.toFixed(2).toLocaleString()} руб
 Окупаемость: ${result.paybackYears.toFixed(2)} лет (${result.paybackMonths.toFixed(0)} мес.)`,
-{
-            reply_markup: new InlineKeyboard().text('Вернуться в начало', 'start')
-          }
-        );
+            {
+              reply_markup: new InlineKeyboard().text(
+                'Вернуться в начало',
+                'start',
+              ),
+            },
+          );
 
-        delete ctx.session.calculatorStep;
-        delete ctx.session.calculator;
-        break;
-        
+          delete ctx.session.calculatorStep;
+          delete ctx.session.calculator;
+          break;
+        }
     }
     return;
-  }})
-
-
-// ==================== Сбор данных ====================
-bot.on('message:text', async (ctx) => {
+  }
   // ======= Сервисная заявка =======
-  if (ctx.session.selectedGas === 'Заявка в сервисную службу АГС' && !ctx.session.contacts) {
+  if (
+    ctx.session.selectedGas === 'Заявка в сервисную службу АГС' &&
+    !ctx.session.contacts
+  ) {
     ctx.session.contacts = ctx.message.text;
     await ctx.reply(
       '✅ Ваша заявка в сервисную службу принята. Спасибо. С вами свяжутся в ближайшее время.',
@@ -409,12 +394,12 @@ bot.on('message:text', async (ctx) => {
 
     // Отправка в amoCRM
     await sendToAmoCRM(ctx.session);
-await sendService(ctx.session);
+    await sendService(ctx.session);
     // Очистка
     ctx.session = {};
     return;
   }
-// bot.on('message:text', async (ctx) => {
+  // bot.on('message:text', async (ctx) => {
   if (!ctx.session.performance && ctx.session.knowsParams) {
     ctx.session.performance = ctx.message.text;
     await ctx.reply('2. Введите точку росы (-40 или -70):');
@@ -437,13 +422,16 @@ await sendService(ctx.session);
 
     await ctx.reply(
       '✅ Данные направлены инженеру для расчета. Спасибо. С вами свяжутся в ближайшее время.',
+      {
+        reply_markup: new InlineKeyboard().text('Вернуться в начало', 'start'),
+      },
     );
     // Параллельно отправляем данные в amoCRM
 
     await sendToAmoCRM(ctx.session); // перед очисткой, чтобы данные не потерялись
-    
-  // Отправка на email
-await sendService(ctx.session);
+
+    // Отправка на email
+    await sendService(ctx.session);
     // Очищаем сессию
     ctx.session = {};
   }
@@ -477,17 +465,17 @@ async function sendToAmoCRM(data: SessionData) {
   const lead: Lead = {
     // name: `Заявка на ${data.selectedGas || 'оборудование'}`,
     name:
-    data.selectedGas === 'Заявка в сервисную службу АГС'
-      ? 'Сервисная заявка'
-      : `Заявка на ${data.selectedGas || 'оборудование'}`,
+      data.selectedGas === 'Заявка в сервисную службу АГС'
+        ? 'Сервисная заявка'
+        : `Заявка на ${data.selectedGas || 'оборудование'}`,
     pipeline_id: 5716552, // замените на ID нужной воронки
     status_id: 50238949, // замените на ID нужного статуса
     tags: [data.selectedGas || 'Без тега'],
     // notes: noteParts.join('\n'),
     notes:
-    data.selectedGas === 'Заявка в сервисную службу АГС'
-      ? `Сервисная заявка:\nКонтакты: ${data.contacts}`
-      : noteParts.join('\n'),
+      data.selectedGas === 'Заявка в сервисную службу АГС'
+        ? `Сервисная заявка:\nКонтакты: ${data.contacts}`
+        : noteParts.join('\n'),
     sourceLead: {
       value: 'Telegram',
       field_id: 595185,
