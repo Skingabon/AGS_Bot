@@ -285,12 +285,16 @@ bot.callbackQuery('button_agr', async (ctx) => {
 // ==================== Обработка ответов "ДА/НЕТ" ====================
 bot.callbackQuery(['button_yes', 'button_yesOsush'], async (ctx) => {
   ctx.session.knowsParams = true;
-  await ctx.reply('1. Введите производительность (нм³/час):');
+  await ctx.reply('1. Введите производительность (нм³/час):', {
+    reply_markup: new InlineKeyboard().text('Вернуться в начало', 'start'),
+  });
 });
 
 bot.callbackQuery(['button_no', 'button_noOsush'], async (ctx) => {
   ctx.session.knowsParams = false;
-  await ctx.reply('Введите ваши контакты (email, телефон):');
+  await ctx.reply('Введите ваши контакты (email, телефон):', {
+    reply_markup: new InlineKeyboard().text('Вернуться в начало', 'start'),
+  });
 });
 
 // ==================== Кнопка "Калькулятор" ====================
@@ -384,20 +388,30 @@ bot.on('message:text', async (ctx) => {
   // bot.on('message:text', async (ctx) => {
   if (!ctx.session.performance && ctx.session.knowsParams) {
     ctx.session.performance = ctx.message.text;
-    await ctx.reply('2. Введите точку росы (-40 или -70):');
+    await ctx.reply('2. Введите точку росы (-40 или -70):', {
+    reply_markup: new InlineKeyboard().text('Вернуться в начало', 'start'),
+  });
   } else if (!ctx.session.dewPoint && ctx.session.performance) {
     ctx.session.dewPoint = ctx.message.text;
-    await ctx.reply('3. Введите давление (MPa):');
+    await ctx.reply('3. Введите давление в барах:', {
+    reply_markup: new InlineKeyboard().text('Вернуться в начало', 'start'),
+  });
   } else if (!ctx.session.pressure && ctx.session.dewPoint) {
     ctx.session.pressure = ctx.message.text;
-    await ctx.reply('4. Введите чистоту газа (%):');
+    await ctx.reply('4. Введите чистоту газа (%):', {
+    reply_markup: new InlineKeyboard().text('Вернуться в начало', 'start'),
+  });
   } else if (!ctx.session.purity && ctx.session.pressure) {
     ctx.session.purity = ctx.message.text;
-    await ctx.reply('5. Введите ваши контакты (телефон, email):');
+    await ctx.reply('5. Введите ваши контакты (телефон, email):', {
+    reply_markup: new InlineKeyboard().text('Вернуться в начало', 'start'),
+  });
   } else if (!ctx.session.contacts) {
     ctx.session.contacts = ctx.message.text;
     await ctx.reply(
-      'Напишите, пожалуйста, как к Вам обращаться и опишите вашу задачу или информацию, которую считаете нужной для нас.',
+      'Напишите, пожалуйста, как к Вам обращаться и опишите вашу задачу или информацию, которую считаете нужной для нас.', {
+    reply_markup: new InlineKeyboard().text('Вернуться в начало', 'start'),
+  }
     );
   } else if (!ctx.session.information) {
     ctx.session.information = ctx.message.text;
